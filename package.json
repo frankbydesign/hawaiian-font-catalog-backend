@@ -1,0 +1,200 @@
+{
+  "project_structure": {
+    "hawaiian-fonts-backend/": {
+      "package.json": {
+        "name": "hawaiian-fonts-api",
+        "version": "1.0.0",
+        "description": "API for Hawaiian font catalog with Google Fonts scanning",
+        "main": "server.js",
+        "scripts": {
+          "start": "node server.js",
+          "dev": "nodemon server.js",
+          "scan": "node font-scanner.js",
+          "db:setup": "psql $DATABASE_URL -f schema.sql"
+        },
+        "dependencies": {
+          "express": "^4.18.2",
+          "cors": "^2.8.5",
+          "helmet": "^7.0.0",
+          "express-rate-limit": "^6.8.1",
+          "pg": "^8.11.3",
+          "puppeteer": "^21.1.1",
+          "axios": "^1.5.0",
+          "node-cron": "^3.0.2",
+          "dotenv": "^16.3.1"
+        },
+        "devDependencies": {
+          "nodemon": "^3.0.1"
+        },
+        "engines": {
+          "node": ">=18.0.0"
+        }
+      },
+      ".env.example": {
+        "content": "DATABASE_URL=postgresql://username:password@localhost:5432/hawaiian_fonts\nFRONTEND_URL=http://localhost:3000\nNODE_ENV=development\nGOOGLE_FONTS_API_KEY=optional_for_better_rate_limits\nPORT=3001"
+      },
+      "Dockerfile": {
+        "content": "FROM node:18-alpine\n\n# Install Puppeteer dependencies\nRUN apk add --no-cache \\\n    chromium \\\n    nss \\\n    freetype \\\n    freetype-dev \\\n    harfbuzz \\\n    ca-certificates \\\n    ttf-freefont\n\n# Tell Puppeteer to skip installing Chromium\nENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \\\n    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser\n\nWORKDIR /app\n\nCOPY package*.json ./\nRUN npm ci --only=production\n\nCOPY . .\n\nUSER node\n\nEXPOSE 3001\n\nCMD [\"npm\", \"start\"]"
+      },
+      "railway.json": {
+        "content": "{\n  \"$schema\": \"https://railway.app/railway.schema.json\",\n  \"build\": {\n    \"builder\": \"DOCKERFILE\",\n    \"dockerfilePath\": \"Dockerfile\"\n  },\n  \"deploy\": {\n    \"startCommand\": \"npm start\",\n    \"restartPolicyType\": \"ON_FAILURE\",\n    \"restartPolicyMaxRetries\": 10\n  }\n}"
+      }
+    },
+    "hawaiian-fonts-frontend/": {
+      "package.json": {
+        "name": "hawaiian-fonts-frontend",
+        "version": "1.0.0",
+        "description": "Frontend for Hawaiian font catalog",
+        "private": true,
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+        },
+        "dependencies": {
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "lucide-react": "^0.263.1"
+        },
+        "devDependencies": {
+          "@types/react": "^18.2.15",
+          "@types/react-dom": "^18.2.7",
+          "@vitejs/plugin-react": "^4.0.3",
+          "autoprefixer": "^10.4.14",
+          "eslint": "^8.45.0",
+          "eslint-plugin-react": "^7.32.2",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "eslint-plugin-react-refresh": "^0.4.3",
+          "postcss": "^8.4.27",
+          "tailwindcss": "^3.3.3",
+          "vite": "^4.4.5"
+        }
+      },
+      "vite.config.js": {
+        "content": "import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  plugins: [react()],\n  server: {\n    port: 3000,\n    proxy: {\n      '/api': {\n        target: 'http://localhost:3001',\n        changeOrigin: true\n      }\n    }\n  },\n  build: {\n    outDir: 'dist',\n    sourcemap: true\n  }\n})"
+      },
+      "tailwind.config.js": {
+        "content": "/** @type {import('tailwindcss').Config} */\nexport default {\n  content: [\n    \"./index.html\",\n    \"./src/**/*.{js,ts,jsx,tsx}\",\n  ],\n  theme: {\n    extend: {\n      fontFamily: {\n        sans: ['Inter', 'system-ui', 'sans-serif'],\n      },\n    },\n  },\n  plugins: [],\n}"
+      },
+      "postcss.config.js": {
+        "content": "export default {\n  plugins: {\n    tailwindcss: {},\n    autoprefixer: {},\n  },\n}"
+      },
+      ".env.example": {
+        "content": "VITE_API_URL=http://localhost:3001"
+      },
+      "vercel.json": {
+        "content": "{\n  \"rewrites\": [\n    {\n      \"source\": \"/api/(.*)\",\n      \"destination\": \"$VITE_API_URL/api/$1\"\n    },\n    {\n      \"source\": \"/(.*)\",\n      \"destination\": \"/index.html\"\n    }\n  ],\n  \"headers\": [\n    {\n      \"source\": \"/api/(.*)\",\n      \"headers\": [\n        {\n          \"key\": \"Access-Control-Allow-Origin\",\n          \"value\": \"*\"\n        },\n        {\n          \"key\": \"Access-Control-Allow-Methods\",\n          \"value\": \"GET, POST, PUT, DELETE, OPTIONS\"\n        },\n        {\n          \"key\": \"Access-Control-Allow-Headers\",\n          \"value\": \"Content-Type, Authorization\"\n        }\n      ]\n    }\n  ]\n}"
+      }
+    }
+  },
+  "deployment_instructions": {
+    "step_1_setup": {
+      "title": "1. Project Setup",
+      "commands": [
+        "mkdir hawaiian-fonts-project && cd hawaiian-fonts-project",
+        "mkdir hawaiian-fonts-backend hawaiian-fonts-frontend",
+        "# Copy all backend files to hawaiian-fonts-backend/",
+        "# Copy all frontend files to hawaiian-fonts-frontend/"
+      ]
+    },
+    "step_2_database": {
+      "title": "2. Database Setup (Railway)",
+      "steps": [
+        "Sign up at railway.app",
+        "Create new project",
+        "Add PostgreSQL database service",
+        "Copy DATABASE_URL from Railway dashboard",
+        "Run: psql $DATABASE_URL -f schema.sql"
+      ]
+    },
+    "step_3_backend": {
+      "title": "3. Backend Deployment (Railway)",
+      "steps": [
+        "Connect Railway to your GitHub repo (backend folder)",
+        "Set environment variables in Railway dashboard:",
+        "  - DATABASE_URL (auto-provided)",
+        "  - FRONTEND_URL (will be your Vercel URL)",
+        "  - NODE_ENV=production",
+        "Deploy will trigger automatically"
+      ]
+    },
+    "step_4_frontend": {
+      "title": "4. Frontend Deployment (Vercel)",
+      "steps": [
+        "Sign up at vercel.com",
+        "Connect your GitHub repo (frontend folder)",
+        "Set environment variables:",
+        "  - VITE_API_URL (your Railway backend URL)",
+        "Deploy will trigger automatically"
+      ]
+    },
+    "step_5_initial_scan": {
+      "title": "5. Initial Font Scanning",
+      "steps": [
+        "After deployment, trigger first scan via API:",
+        "POST https://your-backend-url/api/scan/start",
+        "Body: { \"batchSize\": 50, \"offset\": 0, \"scanType\": \"initial\" }",
+        "Monitor progress at: GET /api/scan/status",
+        "Repeat with different offsets (50, 100, 150, etc.) for full coverage"
+      ]
+    }
+  },
+  "development_setup": {
+    "backend": [
+      "cd hawaiian-fonts-backend",
+      "npm install",
+      "cp .env.example .env",
+      "# Edit .env with your database credentials",
+      "npm run db:setup",
+      "npm run dev"
+    ],
+    "frontend": [
+      "cd hawaiian-fonts-frontend",
+      "npm install",
+      "cp .env.example .env",
+      "# Edit .env with backend URL",
+      "npm run dev"
+    ]
+  },
+  "testing_scan": {
+    "manual_scan": [
+      "cd hawaiian-fonts-backend",
+      "node font-scanner.js",
+      "# This will scan the first 50 most popular fonts"
+    ],
+    "api_scan": [
+      "curl -X POST http://localhost:3001/api/scan/start \\",
+      "  -H \"Content-Type: application/json\" \\",
+      "  -d '{\"batchSize\": 10, \"offset\": 0}'",
+      "",
+      "# Check status:",
+      "curl http://localhost:3001/api/scan/status"
+    ]
+  },
+  "free_tier_optimization": {
+    "railway_tips": [
+      "Use batch scanning to stay under execution time limits",
+      "Start with popular fonts (better value)",
+      "Monitor usage in Railway dashboard",
+      "Consider upgrading to Hobby plan (~$5/month) for production"
+    ],
+    "vercel_tips": [
+      "Frontend will easily stay within free tier",
+      "Uses serverless functions for optimal performance",
+      "Automatic CDN for global distribution"
+    ]
+  },
+  "monitoring": {
+    "health_checks": [
+      "GET /health - API health status",
+      "GET /api/stats - Font catalog statistics",
+      "GET /api/scan/status - Latest scan information"
+    ],
+    "logs": [
+      "Railway: View logs in dashboard",
+      "Vercel: View function logs in dashboard",
+      "Local: npm run dev shows console output"
+    ]
+  }
+}

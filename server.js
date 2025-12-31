@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -5,6 +7,9 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 const cron = require('node-cron');
 const HawaiianFontScanner = require('./font-scanner');
+
+// GitHub token for API integrations (optional)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -517,4 +522,4 @@ app.listen(PORT, () => {
   }
 });
 
-module.exports = app;
+module.exports = { app, GITHUB_TOKEN };
